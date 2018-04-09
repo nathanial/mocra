@@ -1,0 +1,8 @@
+[package]
+name = "mocra"
+version = "0.1.0"
+authors = ["Nathanial Hartman <nathanial.hartman@gmail.com>"]
+
+[dependencies]
+glutin = "*"
+gl = "*"
