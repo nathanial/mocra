@@ -5,16 +5,27 @@
  * The visual tree is rendered
  */
 
-#[derive(Clone, Copy, Debug)]
-struct Bounds {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32
+use std::collections::BTreeMap;
+use std::cell::RefCell;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Bounds {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FontSettings {
+    font_size: i32,
+    font_weight: FontWeight,
+    font_family: FontFamily
 }
 
 #[derive(Debug)]
-enum VisualTreeNode {
+pub enum VisualTreeNode {
+    Empty,
     Rectangle {
         bounds: Bounds,
         fill: Color,
@@ -26,26 +37,24 @@ enum VisualTreeNode {
         content: String,
         bounds: Bounds,
         color: Color,
-        font_size: i32,
-        font_weight: FontWeight,
-        font_family: FontFamily
+        font_settings: FontSettings
     }
 }
 
-trait Widget {
+pub trait Widget {
     fn id(&self) -> i32;
     fn bounds(&self) -> Bounds;
-    fn render(&mut self) -> VisualTreeNode;
+    fn render(&self) -> VisualTreeNode;
 }
 
-type Color = i32;
+pub type Color = i32;
 
-struct Rectangle {
-    id: i32,
-    bounds: Bounds,
-    fill: Color,
-    stroke: Color,
-    stroke_width: i32
+pub struct Rectangle {
+    pub id: i32,
+    pub bounds: Bounds,
+    pub fill: Color,
+    pub stroke: Color,
+    pub stroke_width: i32
 }
 
 impl Widget for Rectangle {
@@ -55,7 +64,7 @@ impl Widget for Rectangle {
     fn bounds(&self) -> Bounds {
         self.bounds
     }
-    fn render(&mut self) -> VisualTreeNode {
+    fn render(&self) -> VisualTreeNode {
         VisualTreeNode::Rectangle {
             bounds: self.bounds,
             fill: self.fill,
@@ -66,26 +75,24 @@ impl Widget for Rectangle {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-enum FontWeight {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FontWeight {
     Light,
     Normal,
     Bold
 }
 
-#[derive(Clone, Copy, Debug)]
-enum FontFamily {
-    Arial
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FontFamily {
+    Arial = 0
 }
 
-struct Text {
-    id: i32,
-    bounds: Bounds,
-    color: Color,
-    font_size: i32,
-    font_weight: FontWeight,
-    font_family: FontFamily,
-    content: String
+pub struct Text {
+    pub id: i32,
+    pub bounds: Bounds,
+    pub color: Color,
+    pub font_settings: FontSettings,
+    pub content: String
 }
 
 impl Widget for Text {
@@ -95,22 +102,20 @@ impl Widget for Text {
     fn bounds(&self) -> Bounds {
         self.bounds.clone()
     }
-    fn render(&mut self) -> VisualTreeNode {
+    fn render(&self) -> VisualTreeNode {
         VisualTreeNode::Text {
             content: self.content.clone(),
             bounds: self.bounds,
             color: self.color,
-            font_size: self.font_size,
-            font_weight: self.font_weight,
-            font_family: self.font_family
+            font_settings: self.font_settings
         }
     }
 }
 
-struct Button {
-    id: i32,
-    bounds: Bounds,
-    label: String
+pub struct Button {
+    pub id: i32,
+    pub bounds: Bounds,
+    pub label: String
 }
 
 impl Widget for Button {
@@ -120,7 +125,7 @@ impl Widget for Button {
     fn bounds(&self) -> Bounds {
         self.bounds.clone()
     }
-    fn render(&mut self) -> VisualTreeNode {
+    fn render(&self) -> VisualTreeNode {
         VisualTreeNode::Rectangle {
             bounds: self.bounds,
             fill: 0xFFFFFF,
@@ -131,26 +136,70 @@ impl Widget for Button {
                     content: self.label.clone(),
                     bounds: self.bounds,
                     color: 0x000000,
-                    font_size: 14,
-                    font_weight: FontWeight::Normal,
-                    font_family: FontFamily::Arial
+                    font_settings: FontSettings {
+                        font_size: 14,
+                        font_weight: FontWeight::Normal,
+                        font_family: FontFamily::Arial
+                    }
                 }
             ]
         }
     }
 }
 
+type Texture = i32;
 
-fn render(root: &VisualTreeNode) {
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub struct TextRenderSettings {
+    bounds: Bounds,
+    font_settings: FontSettings,
+    content: String
+}
+
+thread_local! {
+    pub static TEXTURE_CACHE: RefCell<BTreeMap<TextRenderSettings, Texture>> = RefCell::new(BTreeMap::new());
+}
+
+fn gl_draw_texture(texture: Texture, bounds: &Bounds){
+
+}
+
+fn create_text_texture(font_settings: &TextRenderSettings) -> Texture {
+    panic!("Not Implemented");
+}
+
+fn render_text(bounds: &Bounds, font_settings: &FontSettings, content: String) -> Texture {
+    let settings = TextRenderSettings {bounds: *bounds, font_settings: *font_settings, content: content};
+    TEXTURE_CACHE.with(|cache_cell| {
+        let mut cache = cache_cell.borrow_mut();
+        match cache.get(&settings) {
+            Some(texture) => {
+                return *texture;
+            },
+            None => {}
+        }
+        let texture = create_text_texture(&settings);
+        cache.insert(settings, texture);
+        return texture;
+    })
+}
+
+
+
+pub fn render(root: &VisualTreeNode) {
     match root {
+        &VisualTreeNode::Empty => {
+            println!("Render {:?}", root);
+        },
         &VisualTreeNode::Rectangle {bounds, ref children, stroke_width, stroke, fill } => {
-            println!("Render Rectangle {:?}", root);
+            println!("Render {:?}", root);
             for child in children.iter() {
                 render(child);
             }
         }
-        &VisualTreeNode::Text { bounds, color, font_size, font_family, font_weight, ref content } => {
-            println!("Render Text {:?}", root);
+        &VisualTreeNode::Text { ref bounds, color, ref font_settings, ref content } => {
+            let texture = render_text(bounds, font_settings, content.to_string());
+            gl_draw_texture(texture, bounds);
         }
     }
 }

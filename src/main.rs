@@ -2,6 +2,7 @@ extern crate gl;
 extern crate glutin;
 mod widgets;
 use glutin::GlContext;
+use widgets::{VisualTreeNode, render, Button, Bounds, Widget};
 
 fn main() {
     let mut events_loop = glutin::EventsLoop::new();
@@ -22,6 +23,15 @@ fn main() {
     }
 
     let mut running = true;
+
+
+    let button = Button {
+        id: 0,
+        bounds: Bounds { x:0, y:0, width: 100, height: 100 },
+        label: "Hello".to_string()
+    };
+    let visual_tree = button.render();
+
     while running {
         events_loop.poll_events(|event| {
             match event {
@@ -34,11 +44,11 @@ fn main() {
             }
         });
 
-
-
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+
+        render(&visual_tree);
 
         gl_window.swap_buffers().unwrap();
     }

@@ -6,3 +6,10 @@ authors = ["Nathanial Hartman <nathanial.hartman@gmail.com>"]
 [dependencies]
 glutin = "*"
 gl = "*"
+chrono = "0.4"
+glib = "^0"
+gio = "^0"
+gdk = "^0"
+gdk-pixbuf = "^0"
+pango = "^0"
+cairo-rs = { version = "^0", features = ["png"] }
